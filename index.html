@@ -72,7 +72,7 @@
                 </select>
                 <select id="source" class="google-input text-blue-800 font-black">
                     <option value="">客资来源</option>
-                    <option value="美团">美团</option><option value="抖音">抖音</option><option value="小红书">小红书</option><option value="老客户推荐">老客户推荐</option><option value="内部员工">内部员工</option><option value="高德/百度地图">高德/百度地图</option><option value="广告上门-自动宣传">广告上门-自动宣传</option><option value="Wilson老板">Wilson老板</option><option value="公众号/扫一扫/视频号">公众号/扫一扫/视频号</option><option value="渠道推荐">渠道推荐</option></option><option value="活动推广">活动推广</option>
+                    <option value="美团">美团</option><option value="抖音">抖音</option><option value="小红书">小红书</option><option value="老客户推荐">老客户推荐</option><option value="内部员工">内部员工</option><option value="高德/百度地图">高德/百度地图</option><option value="广告上门-自动宣传">广告上门-自动宣传</option><option value="Wilson老板">Wilson老板</option><option value="公众号/扫一扫/视频号">公众号/扫一扫/视频号</option><option value="渠道推荐">渠道推荐</option><option value="活动推广">活动推广</option>
                 </select>
                 <select id="advisor" class="google-input text-teal-600 font-bold">
                     <option value="">顾问</option>
@@ -110,7 +110,7 @@
                             <th></th><th></th><th></th><th></th>
                             <th class="p-1"><select id="fBiz" onchange="renderAll()" class="filter-select"><option value="">全部分类</option><option value="留学">留学</option><option value="培训">培训</option><option value="培训+留学">培训+留学</option></select></th>
                             <th class="p-1"><select id="fGroup" onchange="renderAll()" class="filter-select"><option value="">全部群体</option><option value="少儿小初">少儿小初</option><option value="高中/大学生">高中/大学生</option><option value="成人客户">成人客户</option></select></th>
-                            <th class="p-1"><select id="fSource" onchange="renderAll()" class="filter-select"><option value="">全部来源</option><option value="美团">美团</option><option value="抖音">抖音</option><option value="小红书">小红书</option><option value="老客户推荐">老客户推荐</option><option value="内部员工">内部员工</option><option value="高德/百度地图">高德/百度地图</option><option value="广告上门-自动宣传">广告上门-自动宣传</option><option value="Wilson老板">Wilson老板</option><option value="公众号/扫一扫/视频号">公众号/扫一扫/视频号</option><option value="渠道推荐">渠道推荐</option></select></th>
+                            <th class="p-1"><select id="fSource" onchange="renderAll()" class="filter-select"><option value="">全部来源</option><option value="美团">美团</option><option value="抖音">抖音</option><option value="小红书">小红书</option><option value="老客户推荐">老客户推荐</option><option value="内部员工">内部员工</option><option value="高德/百度地图">高德/百度地图</option><option value="广告上门-自动宣传">广告上门-自动宣传</option><option value="Wilson老板">Wilson老板</option><option value="公众号/扫一扫/视频号">公众号/扫一扫/视频号</option><option value="渠道推荐">渠道推荐</option><option value="活动推广">活动推广</option></select></th>
                             <th class="p-1"><select id="fAdv" onchange="renderAll()" class="filter-select"><option value="">全部顾问</option><option value="Dora">Dora</option><option value="VIP">VIP</option><option value="Avril">Avril</option></select></th>
                             <th class="p-1"><select id="fCampus" onchange="renderAll()" class="filter-select"><option value="">全部校区</option><option value="金山湖">金山湖</option><option value="佳兆业">佳兆业</option></select></th>
                             <th></th><th></th><th></th><th></th>
@@ -152,7 +152,7 @@
     </div>
 
     <script>
-        // --- 0. 安全访问控制 (在此插入密码逻辑) ---
+        // --- 0. 安全访问控制 ---
         (function() {
             const MY_SECRET_KEY = "kboverseas2014"; 
             const sessionKey = 'kbo_authenticated';
@@ -247,10 +247,15 @@
             const newItem = { 
                 id: Date.now(), 
                 sDate: currentMonthFilter + new Date().getDate() + "日", 
-                sName:'', sSource:'', sProj:'', sPrice:0, sAdv:'', sStaff:'', sNote:'' 
+                sName: '', sSource: '', sProj: '', sPrice: 0, sAdv: '', sStaff: '', sNote: '' 
             };
             const { error } = await _supabase.from('qb_sales_data').insert([newItem]);
-            if(!error) fetchAllData();
+            if(error) {
+                console.error(error);
+                alert("录入失败，请检查数据库连接");
+            } else {
+                fetchAllData();
+            }
         }
 
         async function upItem(id, k, v) {
@@ -368,7 +373,3 @@
     </script>
 </body>
 </html>
-
-
-
-
