@@ -208,10 +208,15 @@
             }
         }
 
-        async function addData() {
+       async function addData() {
             const nameEl = document.getElementById('name');
+            const demandEl = document.getElementById('demand');
+            const dateEl = document.getElementById('date');
+            
+            // 校验姓名必填
             if(!nameEl.value) return alert("请输入姓名");
-            let dVal = document.getElementById('date').value;
+
+            let dVal = dateEl.value;
             let finalDate = dVal.includes('月') ? dVal : (currentMonthFilter + (dVal || new Date().getDate() + "日"));
 
             const newItem = {
@@ -224,9 +229,27 @@
                 advisor: document.getElementById('advisor').value,
                 campus: document.getElementById('campus').value,
                 isVisited: '否',
-                demand: document.getElementById('demand').value,
+                demand: demandEl.value,
                 isSigned: '否'
             };
+
+            const { error } = await _supabase.from('qb_crm_data').insert([newItem]);
+            
+            if(error) {
+                alert("保存失败: " + error.message);
+            } else {
+                // --- 核心改动：录入成功后执行清空 ---
+                nameEl.value = '';     // 清空姓名
+                demandEl.value = '';   // 清空需求备注
+                // dateEl.value = '';  // 如果想日期也清空，取消这一行注释
+                
+                // 让光标自动回到姓名输入框，方便直接录入下一个
+                nameEl.focus();
+                
+                // 刷新表格显示新数据
+                fetchAllData(); 
+            }
+        }
 
             const { error } = await _supabase.from('qb_crm_data').insert([newItem]);
             if(error) alert("保存失败: " + error.message);
@@ -394,3 +417,4 @@
     </script>
 </body>
 </html>
+
