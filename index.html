@@ -193,7 +193,6 @@
                     const errMsg = (e1?.message || "") + (e2?.message || "");
                     document.getElementById('cloudStatus').innerText = "连接失败: " + errMsg;
                     document.getElementById('cloudStatus').className = "bg-red-100 text-red-600 text-[10px] px-2 py-1 rounded";
-                    console.error("Supabase Error:", e1, e2);
                     return;
                 }
 
@@ -238,7 +237,7 @@
             const newItem = { 
                 id: Date.now(), 
                 sdate: currentMonthFilter + new Date().getDate() + "日", 
-                sname: '新签约', 
+                sname: '新签约客户', 
                 ssource: '待定', 
                 sproj: '待定', 
                 sprice: 0, 
@@ -253,12 +252,11 @@
 
         async function upItem(id, k, v) {
             const field = k === 'group' ? 'group_name' : k;
-            const { error } = await _supabase.from('qb_crm_data').update({ [field]: v }).eq('id', id);
-            if(error) console.error("Update failed", error);
+            await _supabase.from('qb_crm_data').update({ [field]: v }).eq('id', id);
         }
 
         async function upS(id, k, v, refresh = false) {
-            const { error } = await _supabase.from('qb_sales_data').update({ [k.toLowerCase()]: v }).eq('id', id);
+            await _supabase.from('qb_sales_data').update({ [k.toLowerCase()]: v }).eq('id', id);
             if(refresh) fetchAllData();
         }
 
@@ -294,6 +292,7 @@
             renderAll();
         }
 
+        // --- 拖拽与序号逻辑 ---
         function initSortable(tableId) {
             const el = document.getElementById(tableId);
             if (!el) return;
@@ -301,7 +300,20 @@
             el._sortable = Sortable.create(el, {
                 handle: '.cursor-move',
                 animation: 150,
-                ghostClass: 'bg-blue-50'
+                ghostClass: 'bg-blue-50',
+                onEnd: function() {
+                    reIndexRows(tableId);
+                }
+            });
+        }
+
+        function reIndexRows(tableId) {
+            const rows = document.querySelectorAll(`#${tableId} tr`);
+            rows.forEach((row, index) => {
+                const indexCell = row.querySelector('.row-index');
+                if (indexCell) {
+                    indexCell.innerText = index + 1;
+                }
             });
         }
 
@@ -313,6 +325,7 @@
             const f4 = document.getElementById('fAdv').value;
             const f5 = document.getElementById('fCampus').value;
 
+            // 渲染 Part 1
             const fCRM = db.filter(i => {
                 return (i.date || '').includes(currentMonthFilter) &&
                        (search === '' || (i.name||'').toLowerCase().includes(search)) &&
@@ -340,13 +353,14 @@
                     <td class="pr-6 text-center"><button onclick="delItem(${i.id})" class="text-gray-300 hover:text-red-500">✕</button></td>
                 </tr>`).join('');
 
+            // 渲染 Part 2
             const fSales = salesDb.filter(s => (s.sdate || s.sDate || '').includes(currentMonthFilter) && (search === '' || (s.sname || s.sName || '').toLowerCase().includes(search)));
             let sum = 0;
             document.getElementById('salesTable').innerHTML = fSales.map((s, idx) => {
                 let p = parseFloat(s.sprice || s.sPrice) || 0; sum += p;
                 return `<tr>
                     <td class="pl-4 text-center row-index">${idx + 1}</td>
-                    <td class="text-gray-300 text-center cursor-move">☰</td>
+                    <td class="text-gray-300 font-bold text-center cursor-move">☰</td>
                     <td><input onchange="upS(${s.id},'sdate',this.value)" class="cell-edit text-blue-600 font-medium" value="${s.sdate || s.sDate || ''}"></td>
                     <td><input onchange="upS(${s.id},'sname',this.value)" class="cell-edit val-name" value="${s.sname || s.sName || ''}"></td>
                     <td><input onchange="upS(${s.id},'ssource',this.value)" class="cell-edit val-source" value="${s.ssource || s.sSource || ''}"></td>
@@ -362,6 +376,7 @@
             document.getElementById('signedCount').innerText = fCRM.filter(i => i.isSigned === '是').length;
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
 
+            // 每次渲染后必须重新绑定拖拽，否则拖拽会失效
             initSortable('dataTable');
             initSortable('salesTable');
         }
@@ -375,7 +390,7 @@
 
         // 启动
         fetchAllData();
-        setInterval(fetchAllData, 15000); // 每15秒自动刷一次
+        setInterval(fetchAllData, 15000); 
     </script>
 </body>
 </html>
