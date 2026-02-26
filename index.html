@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.18</title>
+    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.20</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -40,9 +40,9 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-2xl font-black text-gray-900 tracking-tight">KBO 侨邦国际教育市场部</h1>
-                        <span id="cloudStatus" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-1 rounded">正在连接云端...</span>
+                        <span id="cloudStatus" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-1 rounded">正在同步中...</span>
                     </div>
-                    <p class="text-sm text-gray-500 font-medium">云端同步已开启 - 全员数据共享</p>
+                    <p class="text-sm text-gray-500 font-medium">云端同步已开启 - 全员数据共享 (2026版)</p>
                 </div>
             </div>
             <button onclick="exportAll()" class="bg-white border border-gray-300 text-gray-700 px-6 py-2.5 rounded-full font-bold hover:bg-gray-50 shadow-sm transition">备份全量数据</button>
@@ -185,17 +185,27 @@
 
         // --- 2. 核心函数 ---
         async function fetchAllData() {
-            const { data: crmData, error: e1 } = await _supabase.from('qb_crm_data').select('*').order('id', { ascending: true });
-            const { data: sData, error: e2 } = await _supabase.from('qb_sales_data').select('*').order('id', { ascending: true });
+            try {
+                const { data: crmData, error: e1 } = await _supabase.from('qb_crm_data').select('*').order('id', { ascending: true });
+                const { data: sData, error: e2 } = await _supabase.from('qb_sales_data').select('*').order('id', { ascending: true });
 
-            if (!e1 && !e2) {
+                if (e1 || e2) {
+                    const errMsg = (e1?.message || "") + (e2?.message || "");
+                    document.getElementById('cloudStatus').innerText = "连接失败: " + errMsg;
+                    document.getElementById('cloudStatus').className = "bg-red-100 text-red-600 text-[10px] px-2 py-1 rounded";
+                    console.error("Supabase Error:", e1, e2);
+                    return;
+                }
+
                 db = crmData || [];
                 salesDb = sData || [];
                 renderAll();
-                document.getElementById('cloudStatus').innerText = "云端同步正常";
-                document.getElementById('cloudStatus').className = "bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded";
-            } else {
-                document.getElementById('cloudStatus').innerText = "连接失败";
+                
+                const statusEl = document.getElementById('cloudStatus');
+                statusEl.innerText = "云端已同步 (" + new Date().toLocaleTimeString() + ")";
+                statusEl.className = "bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded";
+            } catch (err) {
+                document.getElementById('cloudStatus').innerText = "网络异常: " + err.message;
             }
         }
 
@@ -224,12 +234,11 @@
             else { nameEl.value = ''; fetchAllData(); }
         }
 
-        // 【修正点】addSalesRow 使用全小写字段名并提供默认值
         async function addSalesRow() {
             const newItem = { 
                 id: Date.now(), 
                 sdate: currentMonthFilter + new Date().getDate() + "日", 
-                sname: '新签约', // 不能为空
+                sname: '新签约', 
                 ssource: '待定', 
                 sproj: '待定', 
                 sprice: 0, 
@@ -238,22 +247,18 @@
                 snote: '' 
             };
             const { error } = await _supabase.from('qb_sales_data').insert([newItem]);
-            if(error) {
-                console.error("写入详情：", error);
-                alert("录入失败：" + error.message);
-            } else {
-                fetchAllData();
-            }
+            if(error) alert("录入失败：" + error.message);
+            else fetchAllData();
         }
 
         async function upItem(id, k, v) {
             const field = k === 'group' ? 'group_name' : k;
-            await _supabase.from('qb_crm_data').update({ [field]: v }).eq('id', id);
+            const { error } = await _supabase.from('qb_crm_data').update({ [field]: v }).eq('id', id);
+            if(error) console.error("Update failed", error);
         }
 
-        // 【修正点】更新函数支持小写字段
         async function upS(id, k, v, refresh = false) {
-            await _supabase.from('qb_sales_data').update({ [k.toLowerCase()]: v }).eq('id', id);
+            const { error } = await _supabase.from('qb_sales_data').update({ [k.toLowerCase()]: v }).eq('id', id);
             if(refresh) fetchAllData();
         }
 
@@ -282,29 +287,21 @@
         }
 
         function resetFilters() {
-            ['fBiz','fGroup','fSource','fAdv','fCampus','filterName'].forEach(id => document.getElementById(id).value = "");
+            ['fBiz','fGroup','fSource','fAdv','fCampus','filterName'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = "";
+            });
             renderAll();
         }
 
-// --- 3. 渲染逻辑 ---
-        
-        // 增加：拖拽初始化函数
         function initSortable(tableId) {
             const el = document.getElementById(tableId);
             if (!el) return;
-            
-            // 销毁旧实例防止重复绑定
             if (el._sortable) el._sortable.destroy();
-
             el._sortable = Sortable.create(el, {
-                handle: '.text-gray-300', // 只有点击 ☰ 图标时才能拖动
+                handle: '.cursor-move',
                 animation: 150,
-                ghostClass: 'bg-blue-50',
-                onEnd: function() {
-                    console.log('拖动排序完成，Vibe 满分！');
-                    // 注意：这里仅改变了前端视觉顺序。
-                    // 若需要永久保存排序，需要数据库增加 sort_order 字段，此处暂不复杂化。
-                }
+                ghostClass: 'bg-blue-50'
             });
         }
 
@@ -316,7 +313,6 @@
             const f4 = document.getElementById('fAdv').value;
             const f5 = document.getElementById('fCampus').value;
 
-            // --- CRM 渲染 ---
             const fCRM = db.filter(i => {
                 return (i.date || '').includes(currentMonthFilter) &&
                        (search === '' || (i.name||'').toLowerCase().includes(search)) &&
@@ -344,7 +340,6 @@
                     <td class="pr-6 text-center"><button onclick="delItem(${i.id})" class="text-gray-300 hover:text-red-500">✕</button></td>
                 </tr>`).join('');
 
-            // --- Sales 渲染 ---
             const fSales = salesDb.filter(s => (s.sdate || s.sDate || '').includes(currentMonthFilter) && (search === '' || (s.sname || s.sName || '').toLowerCase().includes(search)));
             let sum = 0;
             document.getElementById('salesTable').innerHTML = fSales.map((s, idx) => {
@@ -367,7 +362,6 @@
             document.getElementById('signedCount').innerText = fCRM.filter(i => i.isSigned === '是').length;
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
 
-            // 【关键点】渲染完成后，重新激活拖拽
             initSortable('dataTable');
             initSortable('salesTable');
         }
@@ -376,8 +370,12 @@
             let csv = "\uFEFF序号,日期,姓名,分类,群体,来源,顾问,校区,到访,签约,需求\n";
             db.forEach((i, idx) => csv += `${idx+1},${i.date},${i.name},${i.bizType},${i.group_name},${i.source},${i.advisor},${i.campus},${i.isVisited},${i.isSigned},"${i.demand}"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "KBO_BACKUP.csv"; link.click();
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `KBO_DATA_BACKUP_${new Date().toLocaleDateString()}.csv`; link.click();
         }
 
+        // 启动
         fetchAllData();
-        setInterval(fetchAllData, 30000);
+        setInterval(fetchAllData, 15000); // 每15秒自动刷一次
+    </script>
+</body>
+</html>
