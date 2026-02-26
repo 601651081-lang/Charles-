@@ -7,7 +7,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 保留你原有的所有 CSS 样式 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
         body { font-family: 'Noto Sans SC', sans-serif; background-color: #f8f9fa; color: #202124; }
         .google-card { background: white; border-radius: 16px; border: 1px solid #dadce0; box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15); }
@@ -51,8 +50,7 @@
         </div>
 
         <div class="google-card p-4 mb-8 sticky top-4 z-50 flex flex-wrap gap-4 items-center bg-white/95 backdrop-blur-sm">
-            <div class="flex gap-2 p-1 bg-gray-100 rounded-full" id="monthTabs">
-                </div>
+            <div class="flex gap-2 p-1 bg-gray-100 rounded-full" id="monthTabs"></div>
             <div class="flex-grow"></div>
             <input id="filterName" oninput="renderAll()" type="text" placeholder="🔍 搜索姓名..." class="google-input py-2 w-64 text-sm">
         </div>
@@ -62,7 +60,7 @@
                 <span class="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span> 录入新客资到 <span id="entryMonthLabel" class="text-blue-600 font-black">--</span>
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-10 gap-3">
-                <input id="date" type="text" placeholder="日期" class="google-input text-blue-600 font-bold">
+                <input id="date" type="text" placeholder="日期(如:5日)" class="google-input text-blue-600 font-bold">
                 <input id="name" type="text" placeholder="客户姓名*" class="google-input font-bold border-l-4 border-l-blue-600">
                 <select id="bizType" class="google-input text-red-600 font-bold">
                     <option value="">业务分类</option>
@@ -154,13 +152,13 @@
     </div>
 
     <script>
-        // --- 1. 初始化 Supabase ---
         const SUPABASE_URL = 'https://npnzndzrdmujzhiljfpu.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbnpuZHpyZG11anpoaWxqZnB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzE1NDUsImV4cCI6MjA4NzY0NzU0NX0.DlufgflTX6Y3kK6Is3-v9ZilNvPGvc0AvjmGQyk_rU8';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let db = [];
         let salesDb = [];
+        // 【核心修改点 1】: 自动识别当前月份作为初始值
         let currentMonthFilter = (new Date().getMonth() + 1) + '月';
 
         const BIZ_TYPES = ["留学", "培训", "培训+留学"];
@@ -169,20 +167,20 @@
         const ADVISORS = ["Dora", "VIP", "Arvil"];
         const CAMPUSES = ["金山湖", "佳兆业"];
 
-        // 月份选项卡初始化
+        // 初始化月份选项卡
         const mList = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
         document.getElementById('monthTabs').innerHTML = mList.map(mStr => 
             `<button onclick="setMonthFilter('${mStr}')" class="month-chip ${mStr === currentMonthFilter ? 'active' : ''}" data-month="${mStr}">${mStr}</button>`
         ).join('');
 
-        // --- 2. 云端数据交互逻辑 ---
+        // 【核心修改点 2】: 初始化界面显示的月份文字
+        document.getElementById('entryMonthLabel').innerText = currentMonthFilter;
+        document.getElementById('part1Title').innerText = `Part 1. ${currentMonthFilter} 客资追踪`;
+        document.getElementById('part2Title').innerText = `Part 2. ${currentMonthFilter} 签约业绩`;
 
         async function fetchAllData() {
             document.getElementById('cloudStatus').innerText = "正在同步云端...";
-            
-            // 读取 CRM 数据
             const { data: crmData, error: e1 } = await _supabase.from('qb_crm_data').select('*').order('id', { ascending: true });
-            // 读取 Sales 数据
             const { data: sData, error: e2 } = await _supabase.from('qb_sales_data').select('*').order('id', { ascending: true });
 
             if (e1 || e2) {
@@ -200,6 +198,7 @@
             const nameEl = document.getElementById('name');
             if(!nameEl.value) return alert("请输入姓名");
             let dVal = document.getElementById('date').value;
+            // 【核心修改点 3】: 智能拼接日期
             let finalDate = dVal.includes('月') ? dVal : (currentMonthFilter + (dVal || new Date().getDate() + "日"));
 
             const newItem = {
@@ -207,7 +206,7 @@
                 date: finalDate,
                 name: nameEl.value,
                 bizType: document.getElementById('bizType').value,
-                group_name: document.getElementById('group').value, // 数据库里叫 group_name
+                group_name: document.getElementById('group').value,
                 source: document.getElementById('source').value,
                 advisor: document.getElementById('advisor').value,
                 campus: document.getElementById('campus').value,
@@ -235,7 +234,6 @@
         }
 
         async function upItem(id, k, v) {
-            // 注意 group 特殊处理
             const field = k === 'group' ? 'group_name' : k;
             await _supabase.from('qb_crm_data').update({ [field]: v }).eq('id', id);
         }
@@ -265,8 +263,6 @@
                 fetchAllData();
             }
         }
-
-        // --- 3. 渲染与筛选逻辑 (保留你原来的精髓) ---
 
         function setMonthFilter(m) {
             currentMonthFilter = m;
@@ -340,7 +336,6 @@
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
         }
 
-        // 导出功能
         function exportAll() {
             let csv = "\uFEFF【KBO 云端全量备份】\n序号,日期,姓名,分类,群体,来源,顾问,校区,到访,签约,需求\n";
             db.forEach((i, idx) => csv += `${idx+1},${i.date},${i.name},${i.bizType},${i.group_name},${i.source},${i.advisor},${i.campus},${i.isVisited},${i.isSigned},"${i.demand}"\n`);
@@ -348,11 +343,8 @@
             const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "KBO_CLOUD_BACKUP.csv"; link.click();
         }
 
-        // 启动！
         fetchAllData();
-        // 设置每 30 秒自动刷新一次，确保大家看到的数据是最新的
         setInterval(fetchAllData, 30000);
-
     </script>
 </body>
 </html>
