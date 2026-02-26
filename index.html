@@ -2,10 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>KBO 侨邦国际教育 | 业务管理系统 V10.16</title>
+    <title>KBO 侨邦国际教育 | 云端同步版 V10.17</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* 保留你原有的所有 CSS 样式 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
         body { font-family: 'Noto Sans SC', sans-serif; background-color: #f8f9fa; color: #202124; }
         .google-card { background: white; border-radius: 16px; border: 1px solid #dadce0; box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15); }
@@ -27,12 +29,10 @@
         .month-chip.active { background: #1a73e8; color: #fff; border-color: #1a73e8; box-shadow: 0 1px 3px rgba(26,115,232,0.4); font-weight: 700; }
         .kbo-badge { background: #1a73e8; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 12px; }
         .row-index { color: #bdc1c6; font-family: 'Roboto Mono', monospace; font-weight: bold; font-size: 12px; }
-        /* 筛选器样式 */
         .filter-select { font-size: 11px; border: 1px solid #eee; border-radius: 4px; padding: 2px; width: 100%; color: #1a73e8; font-weight: bold; background: #fdfdfd; }
     </style>
 </head>
 <body class="p-6">
-
     <div class="max-w-[1700px] mx-auto">
         <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-4">
@@ -42,9 +42,9 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-2xl font-black text-gray-900 tracking-tight">KBO 侨邦国际教育</h1>
-                        <span class="kbo-badge">V10.16 ANALYTICS</span>
+                        <span id="cloudStatus" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-1 rounded">正在连接云端...</span>
                     </div>
-                    <p class="text-sm text-gray-500 font-medium">支持多条件交叉筛选分析</p>
+                    <p class="text-sm text-gray-500 font-medium">云端同步已开启 - 全员数据共享</p>
                 </div>
             </div>
             <button onclick="exportAll()" class="bg-white border border-gray-300 text-gray-700 px-6 py-2.5 rounded-full font-bold hover:bg-gray-50 shadow-sm transition">备份全量数据</button>
@@ -52,24 +52,17 @@
 
         <div class="google-card p-4 mb-8 sticky top-4 z-50 flex flex-wrap gap-4 items-center bg-white/95 backdrop-blur-sm">
             <div class="flex gap-2 p-1 bg-gray-100 rounded-full" id="monthTabs">
-                <script>
-                    const mList = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-                    const currentMonth = (new Date().getMonth() + 1) + '月';
-                    mList.forEach(mStr => {
-                        document.write(`<button onclick="setMonthFilter('${mStr}')" class="month-chip ${mStr === currentMonth ? 'active' : ''}" data-month="${mStr}">${mStr}</button>`);
-                    });
-                </script>
-            </div>
+                </div>
             <div class="flex-grow"></div>
             <input id="filterName" oninput="renderAll()" type="text" placeholder="🔍 搜索姓名..." class="google-input py-2 w-64 text-sm">
         </div>
 
         <div class="google-card p-6 mb-8">
             <h2 class="text-gray-500 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span class="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span> 录入新客资到 <span id="entryMonthLabel" class="text-blue-600 font-black">2月</span>
+                <span class="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span> 录入新客资到 <span id="entryMonthLabel" class="text-blue-600 font-black">--</span>
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-10 gap-3">
-                <input id="date" type="text" placeholder="日期(如15日)" class="google-input text-blue-600 font-bold">
+                <input id="date" type="text" placeholder="日期" class="google-input text-blue-600 font-bold">
                 <input id="name" type="text" placeholder="客户姓名*" class="google-input font-bold border-l-4 border-l-blue-600">
                 <select id="bizType" class="google-input text-red-600 font-bold">
                     <option value="">业务分类</option>
@@ -161,8 +154,13 @@
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('qb_crm_data')) || [];
-        let salesDb = JSON.parse(localStorage.getItem('qb_sales_data')) || [];
+        // --- 1. 初始化 Supabase ---
+        const SUPABASE_URL = 'https://npnzndzrdmujzhiljfpu.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbnpuZHpyZG11anpoaWxqZnB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzE1NDUsImV4cCI6MjA4NzY0NzU0NX0.DlufgflTX6Y3kK6Is3-v9ZilNvPGvc0AvjmGQyk_rU8';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let db = [];
+        let salesDb = [];
         let currentMonthFilter = (new Date().getMonth() + 1) + '月';
 
         const BIZ_TYPES = ["留学", "培训", "培训+留学"];
@@ -171,44 +169,104 @@
         const ADVISORS = ["Dora", "VIP", "Arvil"];
         const CAMPUSES = ["金山湖", "佳兆业"];
 
-        function getTodayDay() { return new Date().getDate() + "日"; }
+        // 月份选项卡初始化
+        const mList = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+        document.getElementById('monthTabs').innerHTML = mList.map(mStr => 
+            `<button onclick="setMonthFilter('${mStr}')" class="month-chip ${mStr === currentMonthFilter ? 'active' : ''}" data-month="${mStr}">${mStr}</button>`
+        ).join('');
 
-        function addData() {
+        // --- 2. 云端数据交互逻辑 ---
+
+        async function fetchAllData() {
+            document.getElementById('cloudStatus').innerText = "正在同步云端...";
+            
+            // 读取 CRM 数据
+            const { data: crmData, error: e1 } = await _supabase.from('qb_crm_data').select('*').order('id', { ascending: true });
+            // 读取 Sales 数据
+            const { data: sData, error: e2 } = await _supabase.from('qb_sales_data').select('*').order('id', { ascending: true });
+
+            if (e1 || e2) {
+                document.getElementById('cloudStatus').innerText = "连接失败，请检查表结构";
+            } else {
+                db = crmData || [];
+                salesDb = sData || [];
+                renderAll();
+                document.getElementById('cloudStatus').innerText = "云端同步正常";
+                document.getElementById('cloudStatus').className = "bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded";
+            }
+        }
+
+        async function addData() {
             const nameEl = document.getElementById('name');
             if(!nameEl.value) return alert("请输入姓名");
             let dVal = document.getElementById('date').value;
-            let finalDate = dVal.includes('月') ? dVal : (currentMonthFilter + (dVal || getTodayDay()));
+            let finalDate = dVal.includes('月') ? dVal : (currentMonthFilter + (dVal || new Date().getDate() + "日"));
 
-            db.push({
+            const newItem = {
                 id: Date.now(),
                 date: finalDate,
                 name: nameEl.value,
                 bizType: document.getElementById('bizType').value,
-                group: document.getElementById('group').value,
+                group_name: document.getElementById('group').value, // 数据库里叫 group_name
                 source: document.getElementById('source').value,
                 advisor: document.getElementById('advisor').value,
                 campus: document.getElementById('campus').value,
                 isVisited: '否',
                 demand: document.getElementById('demand').value,
                 isSigned: '否'
-            });
-            saveAndRefresh();
-            nameEl.value = ''; document.getElementById('demand').value = '';
-            setTimeout(() => { document.getElementById('crmScroll').scrollTop = 99999; }, 100);
+            };
+
+            const { error } = await _supabase.from('qb_crm_data').insert([newItem]);
+            if(error) alert("云端保存失败: " + error.message);
+            else {
+                nameEl.value = ''; document.getElementById('demand').value = '';
+                fetchAllData();
+            }
         }
 
-        function addSalesRow() {
-            const newId = Date.now();
-            salesDb.push({ 
-                id: newId, 
-                sDate: currentMonthFilter + getTodayDay(), 
+        async function addSalesRow() {
+            const newItem = { 
+                id: Date.now(), 
+                sDate: currentMonthFilter + new Date().getDate() + "日", 
                 sName:'', sSource:'', sProj:'', sPrice:0, sAdv:'', sStaff:'', sNote:'' 
-            });
-            saveAndRefresh();
-            setTimeout(() => {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }, 50);
+            };
+            const { error } = await _supabase.from('qb_sales_data').insert([newItem]);
+            if(!error) fetchAllData();
         }
+
+        async function upItem(id, k, v) {
+            // 注意 group 特殊处理
+            const field = k === 'group' ? 'group_name' : k;
+            await _supabase.from('qb_crm_data').update({ [field]: v }).eq('id', id);
+        }
+
+        async function upS(id, k, v, refresh = false) {
+            await _supabase.from('qb_sales_data').update({ [k]: v }).eq('id', id);
+            if(refresh) fetchAllData();
+        }
+
+        async function toggleField(id, k) {
+            const item = db.find(i => i.id === id);
+            const newVal = item[k] === '是' ? '否' : '是';
+            await _supabase.from('qb_crm_data').update({ [k]: newVal }).eq('id', id);
+            fetchAllData();
+        }
+
+        async function delItem(id) {
+            if(confirm('确认从云端永久删除？')) {
+                await _supabase.from('qb_crm_data').delete().eq('id', id);
+                fetchAllData();
+            }
+        }
+
+        async function delS(id) {
+            if(confirm('确认从云端永久删除？')) {
+                await _supabase.from('qb_sales_data').delete().eq('id', id);
+                fetchAllData();
+            }
+        }
+
+        // --- 3. 渲染与筛选逻辑 (保留你原来的精髓) ---
 
         function setMonthFilter(m) {
             currentMonthFilter = m;
@@ -220,49 +278,40 @@
         }
 
         function resetFilters() {
-            document.getElementById('fBiz').value = "";
-            document.getElementById('fGroup').value = "";
-            document.getElementById('fSource').value = "";
-            document.getElementById('fAdv').value = "";
-            document.getElementById('fCampus').value = "";
-            document.getElementById('filterName').value = "";
+            ['fBiz','fGroup','fSource','fAdv','fCampus','filterName'].forEach(id => document.getElementById(id).value = "");
             renderAll();
         }
 
         function renderAll() {
             const search = document.getElementById('filterName').value.toLowerCase();
-            
-            // 获取下拉筛选器的值
             const f1 = document.getElementById('fBiz').value;
             const f2 = document.getElementById('fGroup').value;
             const f3 = document.getElementById('fSource').value;
             const f4 = document.getElementById('fAdv').value;
             const f5 = document.getElementById('fCampus').value;
 
-            // 升级后的复合筛选逻辑
             const fCRM = db.filter(i => {
-                const matchMonth = i.date.includes(currentMonthFilter);
-                const matchName = (search === '' || i.name.toLowerCase().includes(search));
-                const matchBiz = (f1 === '' || i.bizType === f1);
-                const matchGroup = (f2 === '' || i.group === f2);
-                const matchSource = (f3 === '' || i.source === f3);
-                const matchAdv = (f4 === '' || i.advisor === f4);
-                const matchCampus = (f5 === '' || i.campus === f5);
-                return matchMonth && matchName && matchBiz && matchGroup && matchSource && matchAdv && matchCampus;
+                return i.date.includes(currentMonthFilter) &&
+                       (search === '' || i.name.toLowerCase().includes(search)) &&
+                       (f1 === '' || i.bizType === f1) &&
+                       (f2 === '' || i.group_name === f2) &&
+                       (f3 === '' || i.source === f3) &&
+                       (f4 === '' || i.advisor === f4) &&
+                       (f5 === '' || i.campus === f5);
             });
 
             document.getElementById('dataTable').innerHTML = fCRM.map((i, idx) => `
                 <tr data-id="${i.id}">
                     <td class="pl-4 text-center row-index">${idx + 1}</td>
                     <td class="text-gray-300 font-bold drag-handle cursor-move text-center">☰</td>
-                    <td><input onchange="upItem(${i.id},'date',this.value)" class="cell-edit text-blue-600 font-medium" value="${i.date}"></td>
-                    <td><input onchange="upItem(${i.id},'name',this.value)" class="cell-edit val-name" value="${i.name}"></td>
+                    <td><input onchange="upItem(${i.id},'date',this.value)" class="cell-edit text-blue-600 font-medium" value="${i.date||''}"></td>
+                    <td><input onchange="upItem(${i.id},'name',this.value)" class="cell-edit val-name" value="${i.name||''}"></td>
                     <td><select onchange="upItem(${i.id},'bizType',this.value)" class="cell-edit val-type"><option value="">--</option>${BIZ_TYPES.map(t => `<option value="${t}" ${i.bizType===t?'selected':''}>${t}</option>`).join('')}</select></td>
-                    <td><select onchange="upItem(${i.id},'group',this.value)" class="cell-edit val-group"><option value="">--</option>${GROUPS.map(g => `<option value="${g}" ${i.group===g?'selected':''}>${g}</option>`).join('')}</select></td>
+                    <td><select onchange="upItem(${i.id},'group',this.value)" class="cell-edit val-group"><option value="">--</option>${GROUPS.map(g => `<option value="${g}" ${i.group_name===g?'selected':''}>${g}</option>`).join('')}</select></td>
                     <td><select onchange="upItem(${i.id},'source',this.value)" class="cell-edit val-source">${SOURCES.map(s => `<option value="${s}" ${i.source===s?'selected':''}>${s}</option>`).join('')}</select></td>
                     <td><select onchange="upItem(${i.id},'advisor',this.value)" class="cell-edit val-advisor">${ADVISORS.map(a => `<option value="${a}" ${i.advisor===a?'selected':''}>${a}</option>`).join('')}</select></td>
                     <td><select onchange="upItem(${i.id},'campus',this.value)" class="cell-edit text-orange-600 font-medium">${CAMPUSES.map(c => `<option value="${c}" ${i.campus===c?'selected':''}>${c}</option>`).join('')}</select></td>
-                    <td><input onchange="upItem(${i.id},'demand',this.value)" class="cell-edit text-gray-500 text-xs" value="${i.demand}"></td>
+                    <td><input onchange="upItem(${i.id},'demand',this.value)" class="cell-edit text-gray-500 text-xs" value="${i.demand||''}"></td>
                     <td class="text-center"><button onclick="toggleField(${i.id},'isVisited')" class="status-pill ${i.isVisited==='是'?'visited-yes':'signed-no'}">${i.isVisited==='是'?'已访':'未访'}</button></td>
                     <td class="text-center"><button onclick="toggleField(${i.id},'isSigned')" class="status-pill ${i.isSigned==='是'?'signed-yes':'signed-no'}">${i.isSigned==='是'?'已签':'跟进'}</button></td>
                     <td class="pr-6 text-center"><button onclick="delItem(${i.id})" class="text-gray-300 hover:text-red-500">✕</button></td>
@@ -275,14 +324,14 @@
                 return `<tr data-id="${s.id}">
                     <td class="pl-4 text-center row-index">${idx + 1}</td>
                     <td class="text-gray-300 s-drag-handle cursor-move text-center">☰</td>
-                    <td><input onchange="upS(${s.id},'sDate',this.value)" class="cell-edit text-blue-600 font-medium" value="${s.sDate}"></td>
-                    <td><input onchange="upS(${s.id},'sName',this.value)" class="cell-edit val-name" value="${s.sName}"></td>
-                    <td><input onchange="upS(${s.id},'sSource',this.value)" class="cell-edit val-source" value="${s.sSource}"></td>
-                    <td><input onchange="upS(${s.id},'sProj',this.value)" class="cell-edit font-bold text-gray-700" value="${s.sProj}"></td>
-                    <td><input type="number" onchange="upS(${s.id},'sPrice',this.value,true)" class="cell-edit val-price" value="${s.sPrice}"></td>
-                    <td><input onchange="upS(${s.id},'sAdv',this.value)" class="cell-edit val-advisor" value="${s.sAdv}"></td>
-                    <td><input onchange="upS(${s.id},'sStaff',this.value)" class="cell-edit text-orange-600 font-medium" value="${s.sStaff}"></td>
-                    <td><input onchange="upS(${s.id},'sNote',this.value)" class="cell-edit text-gray-400 text-xs" value="${s.sNote}"></td>
+                    <td><input onchange="upS(${s.id},'sDate',this.value)" class="cell-edit text-blue-600 font-medium" value="${s.sDate||''}"></td>
+                    <td><input onchange="upS(${s.id},'sName',this.value)" class="cell-edit val-name" value="${s.sName||''}"></td>
+                    <td><input onchange="upS(${s.id},'sSource',this.value)" class="cell-edit val-source" value="${s.sSource||''}"></td>
+                    <td><input onchange="upS(${s.id},'sProj',this.value)" class="cell-edit font-bold text-gray-700" value="${s.sProj||''}"></td>
+                    <td><input type="number" onchange="upS(${s.id},'sPrice',this.value,true)" class="cell-edit val-price" value="${s.sPrice||0}"></td>
+                    <td><input onchange="upS(${s.id},'sAdv',this.value)" class="cell-edit val-advisor" value="${s.sAdv||''}"></td>
+                    <td><input onchange="upS(${s.id},'sStaff',this.value)" class="cell-edit text-orange-600 font-medium" value="${s.sStaff||''}"></td>
+                    <td><input onchange="upS(${s.id},'sNote',this.value)" class="cell-edit text-gray-400 text-xs" value="${s.sNote||''}"></td>
                     <td class="pr-6 text-center"><button onclick="delS(${s.id})" class="text-gray-300 hover:text-red-500">✕</button></td></tr>`;
             }).join('');
             
@@ -291,35 +340,19 @@
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
         }
 
-        function upItem(id, k, v) { db = db.map(i => i.id === id ? {...i, [k]: v} : i); saveLocal(); }
-        function upS(id, k, v, shouldRefresh = false) { 
-            salesDb = salesDb.map(s => s.id === id ? {...s, [k]: v} : s); 
-            saveLocal(); 
-            if(shouldRefresh) renderAll(); 
-        }
-        function toggleField(id, k) { db = db.map(i => i.id === id ? {...i, [k]: i[k]==='是'?'否':'是'} : i); saveAndRefresh(); }
-        function delItem(id) { if(confirm('确认删除？')) { db = db.filter(i => i.id !== id); saveAndRefresh(); } }
-        function delS(id) { if(confirm('确认删除？')) { salesDb = salesDb.filter(s => s.id !== id); saveAndRefresh(); } }
-        function saveLocal() {
-            localStorage.setItem('qb_crm_data', JSON.stringify(db));
-            localStorage.setItem('qb_sales_data', JSON.stringify(salesDb));
-        }
-        function saveAndRefresh(refresh = true) {
-            saveLocal();
-            if(refresh) renderAll();
-        }
-        Sortable.create(document.getElementById('dataTable'), { animation: 150, handle: '.drag-handle', onEnd: () => {
-            const rows = Array.from(document.getElementById('dataTable').querySelectorAll('tr'));
-            db = rows.map(row => db.find(d => d.id == row.dataset.id));
-            saveAndRefresh(false); renderAll();
-        }});
+        // 导出功能
         function exportAll() {
-            let csv = "\uFEFF【KBO 全量备份】\n序号,日期,姓名,分类,群体,来源,顾问,校区,到访,签约,需求\n";
-            db.forEach((i, idx) => csv += `${idx+1},${i.date},${i.name},${i.bizType},${i.group},${i.source},${i.advisor},${i.campus},${i.isVisited},${i.isSigned},"${i.demand}"\n`);
+            let csv = "\uFEFF【KBO 云端全量备份】\n序号,日期,姓名,分类,群体,来源,顾问,校区,到访,签约,需求\n";
+            db.forEach((i, idx) => csv += `${idx+1},${i.date},${i.name},${i.bizType},${i.group_name},${i.source},${i.advisor},${i.campus},${i.isVisited},${i.isSigned},"${i.demand}"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "KBO_FULL_DATA.csv"; link.click();
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "KBO_CLOUD_BACKUP.csv"; link.click();
         }
-        setMonthFilter(currentMonthFilter);
+
+        // 启动！
+        fetchAllData();
+        // 设置每 30 秒自动刷新一次，确保大家看到的数据是最新的
+        setInterval(fetchAllData, 30000);
+
     </script>
 </body>
 </html>
