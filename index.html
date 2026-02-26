@@ -286,7 +286,28 @@
             renderAll();
         }
 
-        // --- 3. 渲染逻辑 (字段全部对齐小写) ---
+// --- 3. 渲染逻辑 ---
+        
+        // 增加：拖拽初始化函数
+        function initSortable(tableId) {
+            const el = document.getElementById(tableId);
+            if (!el) return;
+            
+            // 销毁旧实例防止重复绑定
+            if (el._sortable) el._sortable.destroy();
+
+            el._sortable = Sortable.create(el, {
+                handle: '.text-gray-300', // 只有点击 ☰ 图标时才能拖动
+                animation: 150,
+                ghostClass: 'bg-blue-50',
+                onEnd: function() {
+                    console.log('拖动排序完成，Vibe 满分！');
+                    // 注意：这里仅改变了前端视觉顺序。
+                    // 若需要永久保存排序，需要数据库增加 sort_order 字段，此处暂不复杂化。
+                }
+            });
+        }
+
         function renderAll() {
             const search = document.getElementById('filterName').value.toLowerCase();
             const f1 = document.getElementById('fBiz').value;
@@ -295,7 +316,7 @@
             const f4 = document.getElementById('fAdv').value;
             const f5 = document.getElementById('fCampus').value;
 
-            // CRM 渲染
+            // --- CRM 渲染 ---
             const fCRM = db.filter(i => {
                 return (i.date || '').includes(currentMonthFilter) &&
                        (search === '' || (i.name||'').toLowerCase().includes(search)) &&
@@ -309,7 +330,7 @@
             document.getElementById('dataTable').innerHTML = fCRM.map((i, idx) => `
                 <tr>
                     <td class="pl-4 text-center row-index">${idx + 1}</td>
-                    <td class="text-gray-300 font-bold text-center">☰</td>
+                    <td class="text-gray-300 font-bold text-center cursor-move">☰</td>
                     <td><input onchange="upItem(${i.id},'date',this.value)" class="cell-edit text-blue-600 font-medium" value="${i.date||''}"></td>
                     <td><input onchange="upItem(${i.id},'name',this.value)" class="cell-edit val-name" value="${i.name||''}"></td>
                     <td><select onchange="upItem(${i.id},'bizType',this.value)" class="cell-edit val-type"><option value="">--</option>${BIZ_TYPES.map(t => `<option value="${t}" ${i.bizType===t?'selected':''}>${t}</option>`).join('')}</select></td>
@@ -323,14 +344,14 @@
                     <td class="pr-6 text-center"><button onclick="delItem(${i.id})" class="text-gray-300 hover:text-red-500">✕</button></td>
                 </tr>`).join('');
 
-            // Sales 渲染 (注意：这里使用 s.sdate, s.sprice 等小写字段)
+            // --- Sales 渲染 ---
             const fSales = salesDb.filter(s => (s.sdate || s.sDate || '').includes(currentMonthFilter) && (search === '' || (s.sname || s.sName || '').toLowerCase().includes(search)));
             let sum = 0;
             document.getElementById('salesTable').innerHTML = fSales.map((s, idx) => {
                 let p = parseFloat(s.sprice || s.sPrice) || 0; sum += p;
                 return `<tr>
                     <td class="pl-4 text-center row-index">${idx + 1}</td>
-                    <td class="text-gray-300 text-center">☰</td>
+                    <td class="text-gray-300 text-center cursor-move">☰</td>
                     <td><input onchange="upS(${s.id},'sdate',this.value)" class="cell-edit text-blue-600 font-medium" value="${s.sdate || s.sDate || ''}"></td>
                     <td><input onchange="upS(${s.id},'sname',this.value)" class="cell-edit val-name" value="${s.sname || s.sName || ''}"></td>
                     <td><input onchange="upS(${s.id},'ssource',this.value)" class="cell-edit val-source" value="${s.ssource || s.sSource || ''}"></td>
@@ -345,6 +366,10 @@
             document.getElementById('totalCount').innerText = fCRM.length;
             document.getElementById('signedCount').innerText = fCRM.filter(i => i.isSigned === '是').length;
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
+
+            // 【关键点】渲染完成后，重新激活拖拽
+            initSortable('dataTable');
+            initSortable('salesTable');
         }
 
         function exportAll() {
@@ -356,6 +381,3 @@
 
         fetchAllData();
         setInterval(fetchAllData, 30000);
-    </script>
-</body>
-</html>
