@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.50</title>
+    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.55</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -89,8 +89,7 @@
 
         <div class="google-card p-6 mb-8 border-l-4 border-l-purple-600">
             <h2 class="text-gray-500 font-black text-sm uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span class="w-3 h-3 bg-purple-600 rounded-full"></span> 
-                本周资源实时看板 (统计周期：周二至下周一)
+                <span class="w-3 h-3 bg-purple-600 rounded-full"></span> 本周资源实时看板 (统计周期：周二至下周一)
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="advisorStats"></div>
         </div>
@@ -119,17 +118,17 @@
         <div class="google-card overflow-hidden mb-8">
             <div class="p-4 border-b flex justify-between items-center bg-white">
                 <h3 class="font-bold text-gray-700" id="part1Title">Part 1. 客资追踪</h3>
-               <div class="text-sm font-medium flex flex-wrap gap-x-6 gap-y-2 items-center">
-    <span class="text-gray-400">结果: <b id="totalCount" class="text-blue-600 text-lg">0</b></span>
-    <span class="text-gray-400 border-l pl-6 border-gray-200">
-        校区分布: 
-        <span class="text-orange-600">金山湖(<b id="jshtotal">0</b>)</span> 
-        <span class="mx-1">|</span> 
-        <span class="text-orange-600">佳兆业(<b id="jzxtotal">0</b>)</span>
-    </span>
-    <span class="text-gray-400 border-l pl-6 border-gray-200">已签约: <b id="signedCount" class="text-green-600 text-lg">0</b></span>
-    <button onclick="resetFilters()" class="text-xs text-blue-500 hover:underline ml-2">重置</button>
-</div>
+                <div class="text-sm font-medium flex flex-wrap gap-x-6 gap-y-2 items-center">
+                    <span class="text-gray-400">结果: <b id="totalCount" class="text-blue-600 text-lg">0</b></span>
+                    <span class="text-gray-400 border-l pl-6 border-gray-200">
+                        校区分布: 
+                        <span class="text-orange-600">金山湖(<b id="jshtotal">0</b>)</span> 
+                        <span class="mx-1">|</span> 
+                        <span class="text-orange-600">佳兆业(<b id="jzxtotal">0</b>)</span>
+                    </span>
+                    <span class="text-gray-400 border-l pl-6 border-gray-200">已签约: <b id="signedCount" class="text-green-600 text-lg">0</b></span>
+                    <button onclick="resetFilters()" class="text-xs text-blue-500 hover:underline ml-2">重置</button>
+                </div>
             </div>
             <div class="overflow-x-auto max-h-[500px]">
                 <table class="w-full text-left border-collapse">
@@ -164,9 +163,7 @@
                     </h3>
                     <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Daily Inbound Trend</span>
                 </div>
-                <div class="h-[250px]">
-                    <canvas id="trendChart"></canvas>
-                </div>
+                <div class="h-[250px]"><canvas id="trendChart"></canvas></div>
             </div>
             <div class="google-card p-6 flex flex-col justify-center items-center text-center bg-gradient-to-br from-white to-gray-50">
                 <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">月度环比增长率</h3>
@@ -216,7 +213,7 @@
     <script>
         // --- 0. 安全控制 ---
         (function() {
-            const MY_SECRET_KEY = "kboverseas2014"; 
+            const MY_SECRET_KEY = "kboverseas2014";
             const sessionKey = 'kbo_authenticated';
             if (sessionStorage.getItem(sessionKey) !== 'true') {
                 const userInput = prompt("【KBO内部系统】请输入授权码：");
@@ -250,10 +247,7 @@
             try {
                 const { data: crmData, error: e1 } = await _supabase.from('qb_crm_data').select('*').order('id', { ascending: true });
                 const { data: sData, error: e2 } = await _supabase.from('qb_sales_data').select('*').order('id', { ascending: true });
-                if (e1 || e2) {
-                    document.getElementById('cloudStatus').innerText = "连接失败";
-                    return;
-                }
+                if (e1 || e2) { document.getElementById('cloudStatus').innerText = "连接失败"; return; }
                 db = crmData || [];
                 salesDb = sData || [];
                 renderAll();
@@ -343,24 +337,17 @@
             });
         }
 
-        // --- 可视化：进量趋势图 ---
         function renderTrendChart(monthData) {
             const ctx = document.getElementById('trendChart').getContext('2d');
             const days = Array.from({length: 31}, (_, i) => i + 1);
-            const counts = days.map(d => {
-                return monthData.filter(i => (i.date || "").includes(d + "日")).length;
-            });
-
-            // 获取当月周末位置
+            const counts = days.map(d => monthData.filter(i => (i.date || "").includes(d + "日")).length);
             const year = new Date().getFullYear();
             const monthIdx = mList.indexOf(currentMonthFilter);
             const pointColors = days.map(d => {
                 const date = new Date(year, monthIdx, d);
                 return (date.getDay() === 0 || date.getDay() === 6) ? '#ef4444' : '#1a73e8';
             });
-
             if (trendChart) trendChart.destroy();
-
             trendChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -381,15 +368,11 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { display: false } },
-                        x: { grid: { color: '#f1f3f4' } }
-                    }
+                    scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { color: '#f1f3f4' } } }
                 }
             });
         }
 
-        // --- 可视化：环比增长计算 ---
         function renderGrowth(thisMonthCount) {
             const currentIdx = mList.indexOf(currentMonthFilter);
             if (currentIdx === 0) {
@@ -399,19 +382,12 @@
             }
             const lastMonthName = mList[currentIdx - 1];
             const lastMonthCount = db.filter(i => (i.date || '').includes(lastMonthName)).length;
-            
             document.getElementById('lastMonthTotal').innerText = lastMonthCount;
             document.getElementById('thisMonthTotal').innerText = thisMonthCount;
-
-            if (lastMonthCount === 0) {
-                document.getElementById('momValue').innerText = "NEW";
-                return;
-            }
-
+            if (lastMonthCount === 0) { document.getElementById('momValue').innerText = "NEW"; return; }
             const growth = ((thisMonthCount - lastMonthCount) / lastMonthCount * 100).toFixed(1);
             const valEl = document.getElementById('momValue');
             const labelEl = document.getElementById('momLabel');
-
             valEl.innerText = (growth > 0 ? '+' : '') + growth + "%";
             if (growth >= 0) {
                 valEl.className = "text-5xl font-black mb-2 tracking-tighter text-green-600";
@@ -424,7 +400,6 @@
             }
         }
 
-        // --- 原有统计逻辑 ---
         function renderWeeklyStats() {
             const now = new Date();
             const year = now.getFullYear();
@@ -446,16 +421,16 @@
                     return itemDate >= startOfWeek && itemDate <= endOfWeek;
                 });
                 return `<div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-2xl font-black text-gray-800">${adv}</span>
-                            <span class="text-xs bg-purple-100 text-purple-600 px-3 py-1 rounded-full font-bold italic">WEEKLY</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center">
-                            <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">新增</p><p class="text-4xl font-black text-blue-600 tracking-tighter">${weekData.length}</p></div>
-                            <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">到访</p><p class="text-4xl font-black text-orange-500 tracking-tighter">${weekData.filter(i => i.isVisited === '是').length}</p></div>
-                            <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">签约</p><p class="text-4xl font-black text-green-600 tracking-tighter">${weekData.filter(i => i.isSigned === '是').length}</p></div>
-                        </div>
-                    </div>`;
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-2xl font-black text-gray-800">${adv}</span>
+                        <span class="text-xs bg-purple-100 text-purple-600 px-3 py-1 rounded-full font-bold italic">WEEKLY</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">新增</p><p class="text-4xl font-black text-blue-600 tracking-tighter">${weekData.length}</p></div>
+                        <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">到访</p><p class="text-4xl font-black text-orange-500 tracking-tighter">${weekData.filter(i => i.isVisited === '是').length}</p></div>
+                        <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">签约</p><p class="text-4xl font-black text-green-600 tracking-tighter">${weekData.filter(i => i.isSigned === '是').length}</p></div>
+                    </div>
+                </div>`;
             }).join('');
             statsContainer.innerHTML = statsHtml;
         }
@@ -487,8 +462,6 @@
                 return `<div class="py-1"><div class="flex justify-between items-center mb-2"><span class="text-sm font-black text-gray-700">${g}</span><span class="text-xl font-black text-purple-700">${count}</span></div><div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-purple-500 shadow-sm" style="width: ${monthData.length ? (count/monthData.length*100) : 0}%"></div></div></div>`;
             }).join('');
             document.getElementById('mStatsGroup').innerHTML = groupHtml;
-            
-            // 触发可视化渲染
             renderTrendChart(monthData);
             renderGrowth(monthData.length);
         }
@@ -500,12 +473,10 @@
             const fSource = document.getElementById('fSource').value;
             const fAdv = document.getElementById('fAdv').value;
             const fCampus = document.getElementById('fCampus').value;
-
             renderWeeklyStats();
             renderMonthlyBoard();
 
             const fCRM = db.filter(i => (i.date||'').includes(currentMonthFilter) && (search==='' || (i.name||'').toLowerCase().includes(search)) && (fBiz===''||i.bizType===fBiz) && (fGroup===''||i.group_name===fGroup) && (fSource===''||i.source===fSource) && (fAdv===''||i.advisor===fAdv) && (fCampus===''||i.campus===fCampus));
-
             document.getElementById('dataTable').innerHTML = fCRM.map((i, idx) => `
                 <tr>
                     <td class="pl-4 text-center row-index">${idx + 1}</td>
@@ -532,15 +503,12 @@
             
             document.getElementById('totalCount').innerText = fCRM.length;
             document.getElementById('signedCount').innerText = fCRM.filter(i => i.isSigned === '是').length;
-            // 计算各校区资源数 (基于当前筛选后的结果 fCRM)
-            const jshCount = fCRM.filter(i => i.campus === '金山湖').length;
-            const jzxCount = fCRM.filter(i => i.campus === '佳兆业').length;
-
-            // 更新页面显示
-            document.getElementById('jshtotal').innerText = jshCount;
-            document.getElementById('jzxtotal').innerText = jzxCount;
+            
+            // 校区统计核心逻辑
+            document.getElementById('jshtotal').innerText = fCRM.filter(i => i.campus === '金山湖').length;
+            document.getElementById('jzxtotal').innerText = fCRM.filter(i => i.campus === '佳兆业').length;
+            
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
-
             initSortable('dataTable');
             initSortable('salesTable');
         }
@@ -549,7 +517,8 @@
             let csv = "\uFEFF序号,日期,姓名,分类,群体,来源,顾问,校区,到访,签约,需求\n";
             db.forEach((i, idx) => csv += `${idx+1},${i.date},${i.name},${i.bizType},${i.group_name},${i.source},${i.advisor},${i.campus},${i.isVisited},${i.isSigned},"${i.demand}"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `KBO_BACKUP.csv`; link.click();
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob); link.download = `KBO_BACKUP.csv`; link.click();
         }
 
         fetchAllData();
@@ -557,4 +526,3 @@
     </script>
 </body>
 </html>
-
