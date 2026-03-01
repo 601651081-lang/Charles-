@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.35</title>
+    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.50</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
         body { font-family: 'Noto Sans SC', sans-serif; background-color: #f8f9fa; color: #202124; }
@@ -115,7 +116,7 @@
             </div>
         </div>
 
-        <div class="google-card overflow-hidden mb-12">
+        <div class="google-card overflow-hidden mb-8">
             <div class="p-4 border-b flex justify-between items-center bg-white">
                 <h3 class="font-bold text-gray-700" id="part1Title">Part 1. 客资追踪</h3>
                 <div class="text-sm font-medium flex gap-6">
@@ -146,6 +147,33 @@
                     </thead>
                     <tbody id="dataTable"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <div class="lg:col-span-3 google-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-black text-gray-700 flex items-center gap-2">
+                        <span class="w-2 h-4 bg-blue-600 rounded-full"></span> 资源进量日趋势 (1号 - 31号)
+                    </h3>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Daily Inbound Trend</span>
+                </div>
+                <div class="h-[250px]">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <div class="google-card p-6 flex flex-col justify-center items-center text-center bg-gradient-to-br from-white to-gray-50">
+                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">月度环比增长率</h3>
+                <div id="momGrowthContainer">
+                    <div id="momValue" class="text-5xl font-black mb-2 tracking-tighter">--</div>
+                    <div id="momLabel" class="text-xs font-bold px-3 py-1 rounded-full inline-block">计算中...</div>
+                </div>
+                <div class="mt-6 w-full border-t border-dashed pt-4">
+                    <div class="flex justify-between text-[11px] font-bold text-gray-500 px-4">
+                        <span>上月: <b id="lastMonthTotal">0</b></span>
+                        <span>本月: <b id="thisMonthTotal">0</b></span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -199,6 +227,7 @@
         let db = [];
         let salesDb = [];
         let currentMonthFilter = (new Date().getMonth() + 1) + '月';
+        let trendChart = null;
 
         const BIZ_TYPES = ["留学", "培训", "培训+留学"];
         const GROUPS = ["少儿小初", "高中/大学生", "成人客户"];
@@ -308,7 +337,88 @@
             });
         }
 
-        // --- 本周实时统计 (字体调大) ---
+        // --- 可视化：进量趋势图 ---
+        function renderTrendChart(monthData) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const days = Array.from({length: 31}, (_, i) => i + 1);
+            const counts = days.map(d => {
+                return monthData.filter(i => (i.date || "").includes(d + "日")).length;
+            });
+
+            // 获取当月周末位置
+            const year = new Date().getFullYear();
+            const monthIdx = mList.indexOf(currentMonthFilter);
+            const pointColors = days.map(d => {
+                const date = new Date(year, monthIdx, d);
+                return (date.getDay() === 0 || date.getDay() === 6) ? '#ef4444' : '#1a73e8';
+            });
+
+            if (trendChart) trendChart.destroy();
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: days.map(d => d + '日'),
+                    datasets: [{
+                        label: '新增资源',
+                        data: counts,
+                        borderColor: '#1a73e8',
+                        backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: pointColors,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { color: '#f1f3f4' } }
+                    }
+                }
+            });
+        }
+
+        // --- 可视化：环比增长计算 ---
+        function renderGrowth(thisMonthCount) {
+            const currentIdx = mList.indexOf(currentMonthFilter);
+            if (currentIdx === 0) {
+                document.getElementById('momValue').innerText = "--";
+                document.getElementById('momLabel').innerText = "首月无对比";
+                return;
+            }
+            const lastMonthName = mList[currentIdx - 1];
+            const lastMonthCount = db.filter(i => (i.date || '').includes(lastMonthName)).length;
+            
+            document.getElementById('lastMonthTotal').innerText = lastMonthCount;
+            document.getElementById('thisMonthTotal').innerText = thisMonthCount;
+
+            if (lastMonthCount === 0) {
+                document.getElementById('momValue').innerText = "NEW";
+                return;
+            }
+
+            const growth = ((thisMonthCount - lastMonthCount) / lastMonthCount * 100).toFixed(1);
+            const valEl = document.getElementById('momValue');
+            const labelEl = document.getElementById('momLabel');
+
+            valEl.innerText = (growth > 0 ? '+' : '') + growth + "%";
+            if (growth >= 0) {
+                valEl.className = "text-5xl font-black mb-2 tracking-tighter text-green-600";
+                labelEl.innerText = "比上月增长";
+                labelEl.className = "text-xs font-bold px-3 py-1 rounded-full inline-block bg-green-100 text-green-700";
+            } else {
+                valEl.className = "text-5xl font-black mb-2 tracking-tighter text-red-600";
+                labelEl.innerText = "比上月下降";
+                labelEl.className = "text-xs font-bold px-3 py-1 rounded-full inline-block bg-red-100 text-red-700";
+            }
+        }
+
+        // --- 原有统计逻辑 ---
         function renderWeeklyStats() {
             const now = new Date();
             const year = now.getFullYear();
@@ -329,8 +439,7 @@
                     const itemDate = new Date(year, parseInt(dateMatch[1]) - 1, parseInt(dateMatch[2]));
                     return itemDate >= startOfWeek && itemDate <= endOfWeek;
                 });
-                return `
-                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                return `<div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
                         <div class="flex justify-between items-center mb-4">
                             <span class="text-2xl font-black text-gray-800">${adv}</span>
                             <span class="text-xs bg-purple-100 text-purple-600 px-3 py-1 rounded-full font-bold italic">WEEKLY</span>
@@ -345,22 +454,14 @@
             statsContainer.innerHTML = statsHtml;
         }
 
-        // --- 月度多维统计 (字体调大) ---
         function renderMonthlyBoard() {
             document.getElementById('monthlyStatsTitle').innerText = currentMonthFilter;
             const monthData = db.filter(i => (i.date || '').includes(currentMonthFilter));
-
-            // 1. 顾问统计
             const advHtml = ADVISORS.map(adv => {
                 const count = monthData.filter(i => i.advisor === adv).length;
-                return `<div class="flex justify-between items-center bg-blue-50/50 p-4 rounded-xl">
-                    <span class="text-lg font-black text-gray-700">${adv}</span>
-                    <span class="bg-blue-600 text-white text-xl px-4 py-1 rounded-lg font-black">${count}</span>
-                </div>`;
+                return `<div class="flex justify-between items-center bg-blue-50/50 p-4 rounded-xl"><span class="text-lg font-black text-gray-700">${adv}</span><span class="bg-blue-600 text-white text-xl px-4 py-1 rounded-lg font-black">${count}</span></div>`;
             }).join('');
             document.getElementById('mStatsAdvisor').innerHTML = advHtml;
-
-            // 2. 周数统计
             const weeks = ["第一周 (1-8日)", "第二周 (9-16日)", "第三周 (17-24日)", "第四周 (25日+)"];
             const weekHtml = weeks.map((w, idx) => {
                 const count = monthData.filter(item => {
@@ -372,27 +473,18 @@
                     if(idx === 2) return day > 16 && day <= 24;
                     return day > 24;
                 }).length;
-                return `<div class="flex justify-between items-center border-b border-gray-100 pb-2">
-                    <span class="text-sm text-gray-600 font-bold">${w}</span>
-                    <span class="text-2xl font-black text-green-600 tracking-tight">${count}</span>
-                </div>`;
+                return `<div class="flex justify-between items-center border-b border-gray-100 pb-2"><span class="text-sm text-gray-600 font-bold">${w}</span><span class="text-2xl font-black text-green-600 tracking-tight">${count}</span></div>`;
             }).join('');
             document.getElementById('mStatsWeekly').innerHTML = weekHtml;
-
-            // 3. 群体分布
             const groupHtml = GROUPS.map(g => {
                 const count = monthData.filter(i => i.group_name === g).length;
-                return `<div class="py-1">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-black text-gray-700">${g}</span>
-                        <span class="text-xl font-black text-purple-700">${count}</span>
-                    </div>
-                    <div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-purple-500 shadow-sm" style="width: ${monthData.length ? (count/monthData.length*100) : 0}%"></div>
-                    </div>
-                </div>`;
+                return `<div class="py-1"><div class="flex justify-between items-center mb-2"><span class="text-sm font-black text-gray-700">${g}</span><span class="text-xl font-black text-purple-700">${count}</span></div><div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-purple-500 shadow-sm" style="width: ${monthData.length ? (count/monthData.length*100) : 0}%"></div></div></div>`;
             }).join('');
             document.getElementById('mStatsGroup').innerHTML = groupHtml;
+            
+            // 触发可视化渲染
+            renderTrendChart(monthData);
+            renderGrowth(monthData.length);
         }
 
         function renderAll() {
