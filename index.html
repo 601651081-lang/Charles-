@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.30</title>
+    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.35</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -87,30 +87,30 @@
         </div>
 
         <div class="google-card p-6 mb-8 border-l-4 border-l-purple-600">
-            <h2 class="text-gray-500 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span class="w-2 h-2 bg-purple-600 rounded-full"></span> 
+            <h2 class="text-gray-500 font-black text-sm uppercase tracking-widest mb-6 flex items-center gap-2">
+                <span class="w-3 h-3 bg-purple-600 rounded-full"></span> 
                 本周资源实时看板 (统计周期：周二至下周一)
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="advisorStats"></div>
         </div>
 
         <div class="google-card p-6 mb-8 border-l-4 border-l-blue-500 bg-blue-50/10">
-            <h2 class="text-gray-500 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 
+            <h2 class="text-gray-500 font-black text-sm uppercase tracking-widest mb-6 flex items-center gap-2">
+                <span class="w-3 h-3 bg-blue-500 rounded-full"></span> 
                 <span id="monthlyStatsTitle">--</span> 月度资源概览 (顾问 / 周数 / 群体)
             </h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-blue-400 mb-3 tracking-widest">ADVISOR TOTAL</p>
-                    <div id="mStatsAdvisor" class="space-y-3"></div>
+                <div class="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                    <p class="text-xs font-black text-blue-500 mb-4 tracking-widest">顾问总计 ADVISOR</p>
+                    <div id="mStatsAdvisor" class="space-y-4"></div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-green-400 mb-3 tracking-widest">WEEKLY TREND</p>
-                    <div id="mStatsWeekly" class="space-y-3"></div>
+                <div class="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                    <p class="text-xs font-black text-green-500 mb-4 tracking-widest">每周新增 WEEKLY</p>
+                    <div id="mStatsWeekly" class="space-y-4"></div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-purple-400 mb-3 tracking-widest">GROUP DISTRIBUTION</p>
-                    <div id="mStatsGroup" class="space-y-3"></div>
+                <div class="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                    <p class="text-xs font-black text-purple-500 mb-4 tracking-widest">群体分布 GROUP</p>
+                    <div id="mStatsGroup" class="space-y-4"></div>
                 </div>
             </div>
         </div>
@@ -308,7 +308,7 @@
             });
         }
 
-        // --- 本周实时统计 ---
+        // --- 本周实时统计 (字体调大) ---
         function renderWeeklyStats() {
             const now = new Date();
             const year = now.getFullYear();
@@ -330,22 +330,22 @@
                     return itemDate >= startOfWeek && itemDate <= endOfWeek;
                 });
                 return `
-                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-lg font-black text-gray-800">${adv}</span>
-                            <span class="text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded">本周活跃</span>
+                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-2xl font-black text-gray-800">${adv}</span>
+                            <span class="text-xs bg-purple-100 text-purple-600 px-3 py-1 rounded-full font-bold italic">WEEKLY</span>
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-center">
-                            <div><p class="text-gray-400 text-[10px] uppercase">新增</p><p class="text-xl font-black text-blue-600">${weekData.length}</p></div>
-                            <div><p class="text-gray-400 text-[10px] uppercase">到访</p><p class="text-xl font-black text-orange-500">${weekData.filter(i => i.isVisited === '是').length}</p></div>
-                            <div><p class="text-gray-400 text-[10px] uppercase">签约</p><p class="text-xl font-black text-green-600">${weekData.filter(i => i.isSigned === '是').length}</p></div>
+                            <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">新增</p><p class="text-4xl font-black text-blue-600 tracking-tighter">${weekData.length}</p></div>
+                            <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">到访</p><p class="text-4xl font-black text-orange-500 tracking-tighter">${weekData.filter(i => i.isVisited === '是').length}</p></div>
+                            <div><p class="text-gray-400 text-xs font-bold uppercase mb-1">签约</p><p class="text-4xl font-black text-green-600 tracking-tighter">${weekData.filter(i => i.isSigned === '是').length}</p></div>
                         </div>
                     </div>`;
             }).join('');
             statsContainer.innerHTML = statsHtml;
         }
 
-        // --- 新增：本月多维统计逻辑 ---
+        // --- 月度多维统计 (字体调大) ---
         function renderMonthlyBoard() {
             document.getElementById('monthlyStatsTitle').innerText = currentMonthFilter;
             const monthData = db.filter(i => (i.date || '').includes(currentMonthFilter));
@@ -353,15 +353,15 @@
             // 1. 顾问统计
             const advHtml = ADVISORS.map(adv => {
                 const count = monthData.filter(i => i.advisor === adv).length;
-                return `<div class="flex justify-between items-center bg-blue-50/50 p-2 rounded">
-                    <span class="font-bold text-gray-700">${adv}</span>
-                    <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-black">${count}</span>
+                return `<div class="flex justify-between items-center bg-blue-50/50 p-4 rounded-xl">
+                    <span class="text-lg font-black text-gray-700">${adv}</span>
+                    <span class="bg-blue-600 text-white text-xl px-4 py-1 rounded-lg font-black">${count}</span>
                 </div>`;
             }).join('');
             document.getElementById('mStatsAdvisor').innerHTML = advHtml;
 
-            // 2. 周数统计 (1-8日为第一周, 9-16二, 17-24三, 25+四)
-            const weeks = ["第一周 (1-8)", "第二周 (9-16)", "第三周 (17-24)", "第四周 (25+)"];
+            // 2. 周数统计
+            const weeks = ["第一周 (1-8日)", "第二周 (9-16日)", "第三周 (17-24日)", "第四周 (25日+)"];
             const weekHtml = weeks.map((w, idx) => {
                 const count = monthData.filter(item => {
                     const dMatch = (item.date || "").match(/(\d+)日/);
@@ -372,9 +372,9 @@
                     if(idx === 2) return day > 16 && day <= 24;
                     return day > 24;
                 }).length;
-                return `<div class="flex justify-between items-center border-b border-gray-50 pb-1">
-                    <span class="text-xs text-gray-500 font-medium">${w}</span>
-                    <span class="text-green-600 font-black">${count}</span>
+                return `<div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                    <span class="text-sm text-gray-600 font-bold">${w}</span>
+                    <span class="text-2xl font-black text-green-600 tracking-tight">${count}</span>
                 </div>`;
             }).join('');
             document.getElementById('mStatsWeekly').innerHTML = weekHtml;
@@ -382,13 +382,13 @@
             // 3. 群体分布
             const groupHtml = GROUPS.map(g => {
                 const count = monthData.filter(i => i.group_name === g).length;
-                return `<div class="flex justify-between items-center">
-                    <span class="text-xs text-gray-600">${g}</span>
-                    <div class="flex items-center gap-2">
-                        <div class="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-purple-500" style="width: ${monthData.length ? (count/monthData.length*100) : 0}%"></div>
-                        </div>
-                        <span class="text-xs font-bold text-purple-700 w-6">${count}</span>
+                return `<div class="py-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-black text-gray-700">${g}</span>
+                        <span class="text-xl font-black text-purple-700">${count}</span>
+                    </div>
+                    <div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-purple-500 shadow-sm" style="width: ${monthData.length ? (count/monthData.length*100) : 0}%"></div>
                     </div>
                 </div>`;
             }).join('');
