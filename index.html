@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.25</title>
+    <title>KBO 侨邦国际教育市场部 | 云端同步版 V10.30</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -91,8 +91,28 @@
                 <span class="w-2 h-2 bg-purple-600 rounded-full"></span> 
                 本周资源实时看板 (统计周期：周二至下周一)
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="advisorStats">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="advisorStats"></div>
+        </div>
+
+        <div class="google-card p-6 mb-8 border-l-4 border-l-blue-500 bg-blue-50/10">
+            <h2 class="text-gray-500 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 
+                <span id="monthlyStatsTitle">--</span> 月度资源概览 (顾问 / 周数 / 群体)
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                    <p class="text-[10px] font-bold text-blue-400 mb-3 tracking-widest">ADVISOR TOTAL</p>
+                    <div id="mStatsAdvisor" class="space-y-3"></div>
                 </div>
+                <div class="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                    <p class="text-[10px] font-bold text-green-400 mb-3 tracking-widest">WEEKLY TREND</p>
+                    <div id="mStatsWeekly" class="space-y-3"></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                    <p class="text-[10px] font-bold text-purple-400 mb-3 tracking-widest">GROUP DISTRIBUTION</p>
+                    <div id="mStatsGroup" class="space-y-3"></div>
+                </div>
+            </div>
         </div>
 
         <div class="google-card overflow-hidden mb-12">
@@ -186,18 +206,15 @@
         const ADVISORS = ["Dora", "VIP", "Avril"];
         const CAMPUSES = ["金山湖", "佳兆业"];
 
-        // 初始化月份
         const mList = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
         document.getElementById('monthTabs').innerHTML = mList.map(mStr => 
             `<button onclick="setMonthFilter('${mStr}')" class="month-chip ${mStr === currentMonthFilter ? 'active' : ''}" data-month="${mStr}">${mStr}</button>`
         ).join('');
 
-        // 获取数据
         async function fetchAllData() {
             try {
                 const { data: crmData, error: e1 } = await _supabase.from('qb_crm_data').select('*').order('id', { ascending: true });
                 const { data: sData, error: e2 } = await _supabase.from('qb_sales_data').select('*').order('id', { ascending: true });
-
                 if (e1 || e2) {
                     document.getElementById('cloudStatus').innerText = "连接失败";
                     return;
@@ -208,22 +225,16 @@
                 const statusEl = document.getElementById('cloudStatus');
                 statusEl.innerText = "云端已同步 (" + new Date().toLocaleTimeString() + ")";
                 statusEl.className = "bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded";
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // 录入数据并清空
         async function addData() {
             const nameEl = document.getElementById('name');
             const demandEl = document.getElementById('demand');
             const dateEl = document.getElementById('date');
-            
             if(!nameEl.value) return alert("请输入姓名");
-
             let dVal = dateEl.value;
             let finalDate = dVal.includes('月') ? dVal : (currentMonthFilter + (dVal || new Date().getDate() + "日"));
-
             const newItem = {
                 id: Date.now(),
                 date: finalDate,
@@ -237,16 +248,9 @@
                 demand: demandEl.value,
                 isSigned: '否'
             };
-
             const { error } = await _supabase.from('qb_crm_data').insert([newItem]);
-            if(error) {
-                alert("保存失败: " + error.message);
-            } else {
-                nameEl.value = ''; 
-                demandEl.value = '';
-                nameEl.focus();
-                fetchAllData(); 
-            }
+            if(error) alert("保存失败: " + error.message);
+            else { nameEl.value = ''; demandEl.value = ''; nameEl.focus(); fetchAllData(); }
         }
 
         async function addSalesRow() {
@@ -272,13 +276,8 @@
             fetchAllData();
         }
 
-        async function delItem(id) {
-            if(confirm('确认删除？')) { await _supabase.from('qb_crm_data').delete().eq('id', id); fetchAllData(); }
-        }
-
-        async function delS(id) {
-            if(confirm('确认删除？')) { await _supabase.from('qb_sales_data').delete().eq('id', id); fetchAllData(); }
-        }
+        async function delItem(id) { if(confirm('确认删除？')) { await _supabase.from('qb_crm_data').delete().eq('id', id); fetchAllData(); } }
+        async function delS(id) { if(confirm('确认删除？')) { await _supabase.from('qb_sales_data').delete().eq('id', id); fetchAllData(); } }
 
         function setMonthFilter(m) {
             currentMonthFilter = m;
@@ -298,11 +297,7 @@
             const el = document.getElementById(tableId);
             if (!el) return;
             if (el._sortable) el._sortable.destroy();
-            el._sortable = Sortable.create(el, {
-                handle: '.cursor-move',
-                animation: 150,
-                onEnd: () => reIndexRows(tableId)
-            });
+            el._sortable = Sortable.create(el, { handle: '.cursor-move', animation: 150, onEnd: () => reIndexRows(tableId) });
         }
 
         function reIndexRows(tableId) {
@@ -313,41 +308,27 @@
             });
         }
 
-        // --- 新增：周统计逻辑实现 ---
+        // --- 本周实时统计 ---
         function renderWeeklyStats() {
             const now = new Date();
             const year = now.getFullYear();
-            
-            // 计算当前自然周（周二至下周一）
-            // getDay() 0是周日，2是周二
             let dayOffset = now.getDay() - 2;
-            if (dayOffset < 0) dayOffset += 7; // 如果是周一，offset会修正
-            
+            if (dayOffset < 0) dayOffset += 7;
             const startOfWeek = new Date(now);
             startOfWeek.setDate(now.getDate() - dayOffset);
             startOfWeek.setHours(0,0,0,0);
-            
             const endOfWeek = new Date(startOfWeek);
             endOfWeek.setDate(startOfWeek.getDate() + 6);
             endOfWeek.setHours(23,59,59,999);
-
             const statsContainer = document.getElementById('advisorStats');
-            
             const statsHtml = ADVISORS.map(adv => {
-                // 过滤该顾问在本周内的数据
                 const weekData = db.filter(item => {
                     if (item.advisor !== adv) return false;
-                    // 解析类似 "1月5日" 的字符串
                     const dateMatch = (item.date || "").match(/(\d+)月(\d+)日/);
                     if (!dateMatch) return false;
                     const itemDate = new Date(year, parseInt(dateMatch[1]) - 1, parseInt(dateMatch[2]));
                     return itemDate >= startOfWeek && itemDate <= endOfWeek;
                 });
-
-                const total = weekData.length;
-                const signed = weekData.filter(i => i.isSigned === '是').length;
-                const visited = weekData.filter(i => i.isVisited === '是').length;
-
                 return `
                     <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
                         <div class="flex justify-between items-center mb-2">
@@ -355,15 +336,63 @@
                             <span class="text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded">本周活跃</span>
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-center">
-                            <div><p class="text-gray-400 text-[10px] uppercase">新增</p><p class="text-xl font-black text-blue-600">${total}</p></div>
-                            <div><p class="text-gray-400 text-[10px] uppercase">到访</p><p class="text-xl font-black text-orange-500">${visited}</p></div>
-                            <div><p class="text-gray-400 text-[10px] uppercase">签约</p><p class="text-xl font-black text-green-600">${signed}</p></div>
+                            <div><p class="text-gray-400 text-[10px] uppercase">新增</p><p class="text-xl font-black text-blue-600">${weekData.length}</p></div>
+                            <div><p class="text-gray-400 text-[10px] uppercase">到访</p><p class="text-xl font-black text-orange-500">${weekData.filter(i => i.isVisited === '是').length}</p></div>
+                            <div><p class="text-gray-400 text-[10px] uppercase">签约</p><p class="text-xl font-black text-green-600">${weekData.filter(i => i.isSigned === '是').length}</p></div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }).join('');
-
             statsContainer.innerHTML = statsHtml;
+        }
+
+        // --- 新增：本月多维统计逻辑 ---
+        function renderMonthlyBoard() {
+            document.getElementById('monthlyStatsTitle').innerText = currentMonthFilter;
+            const monthData = db.filter(i => (i.date || '').includes(currentMonthFilter));
+
+            // 1. 顾问统计
+            const advHtml = ADVISORS.map(adv => {
+                const count = monthData.filter(i => i.advisor === adv).length;
+                return `<div class="flex justify-between items-center bg-blue-50/50 p-2 rounded">
+                    <span class="font-bold text-gray-700">${adv}</span>
+                    <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-black">${count}</span>
+                </div>`;
+            }).join('');
+            document.getElementById('mStatsAdvisor').innerHTML = advHtml;
+
+            // 2. 周数统计 (1-8日为第一周, 9-16二, 17-24三, 25+四)
+            const weeks = ["第一周 (1-8)", "第二周 (9-16)", "第三周 (17-24)", "第四周 (25+)"];
+            const weekHtml = weeks.map((w, idx) => {
+                const count = monthData.filter(item => {
+                    const dMatch = (item.date || "").match(/(\d+)日/);
+                    if(!dMatch) return false;
+                    const day = parseInt(dMatch[1]);
+                    if(idx === 0) return day <= 8;
+                    if(idx === 1) return day > 8 && day <= 16;
+                    if(idx === 2) return day > 16 && day <= 24;
+                    return day > 24;
+                }).length;
+                return `<div class="flex justify-between items-center border-b border-gray-50 pb-1">
+                    <span class="text-xs text-gray-500 font-medium">${w}</span>
+                    <span class="text-green-600 font-black">${count}</span>
+                </div>`;
+            }).join('');
+            document.getElementById('mStatsWeekly').innerHTML = weekHtml;
+
+            // 3. 群体分布
+            const groupHtml = GROUPS.map(g => {
+                const count = monthData.filter(i => i.group_name === g).length;
+                return `<div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-600">${g}</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-purple-500" style="width: ${monthData.length ? (count/monthData.length*100) : 0}%"></div>
+                        </div>
+                        <span class="text-xs font-bold text-purple-700 w-6">${count}</span>
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('mStatsGroup').innerHTML = groupHtml;
         }
 
         function renderAll() {
@@ -374,8 +403,8 @@
             const fAdv = document.getElementById('fAdv').value;
             const fCampus = document.getElementById('fCampus').value;
 
-            // 渲染看板数据
             renderWeeklyStats();
+            renderMonthlyBoard();
 
             const fCRM = db.filter(i => (i.date||'').includes(currentMonthFilter) && (search==='' || (i.name||'').toLowerCase().includes(search)) && (fBiz===''||i.bizType===fBiz) && (fGroup===''||i.group_name===fGroup) && (fSource===''||i.source===fSource) && (fAdv===''||i.advisor===fAdv) && (fCampus===''||i.campus===fCampus));
 
