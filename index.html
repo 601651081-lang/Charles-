@@ -119,11 +119,17 @@
         <div class="google-card overflow-hidden mb-8">
             <div class="p-4 border-b flex justify-between items-center bg-white">
                 <h3 class="font-bold text-gray-700" id="part1Title">Part 1. 客资追踪</h3>
-                <div class="text-sm font-medium flex gap-6">
-                    <span class="text-gray-400">结果: <b id="totalCount" class="text-blue-600 text-lg">0</b></span>
-                    <span class="text-gray-400">已签约: <b id="signedCount" class="text-green-600 text-lg">0</b></span>
-                    <button onclick="resetFilters()" class="text-xs text-blue-500 hover:underline">重置</button>
-                </div>
+               <div class="text-sm font-medium flex flex-wrap gap-x-6 gap-y-2 items-center">
+    <span class="text-gray-400">结果: <b id="totalCount" class="text-blue-600 text-lg">0</b></span>
+    <span class="text-gray-400 border-l pl-6 border-gray-200">
+        校区分布: 
+        <span class="text-orange-600">金山湖(<b id="jshtotal">0</b>)</span> 
+        <span class="mx-1">|</span> 
+        <span class="text-orange-600">佳兆业(<b id="jzxtotal">0</b>)</span>
+    </span>
+    <span class="text-gray-400 border-l pl-6 border-gray-200">已签约: <b id="signedCount" class="text-green-600 text-lg">0</b></span>
+    <button onclick="resetFilters()" class="text-xs text-blue-500 hover:underline ml-2">重置</button>
+</div>
             </div>
             <div class="overflow-x-auto max-h-[500px]">
                 <table class="w-full text-left border-collapse">
@@ -526,6 +532,13 @@
             
             document.getElementById('totalCount').innerText = fCRM.length;
             document.getElementById('signedCount').innerText = fCRM.filter(i => i.isSigned === '是').length;
+            // 计算各校区资源数 (基于当前筛选后的结果 fCRM)
+            const jshCount = fCRM.filter(i => i.campus === '金山湖').length;
+            const jzxCount = fCRM.filter(i => i.campus === '佳兆业').length;
+
+            // 更新页面显示
+            document.getElementById('jshtotal').innerText = jshCount;
+            document.getElementById('jzxtotal').innerText = jzxCount;
             document.getElementById('totalIncome').innerText = sum.toLocaleString('zh-CN', {minimumFractionDigits: 2});
 
             initSortable('dataTable');
@@ -544,3 +557,4 @@
     </script>
 </body>
 </html>
+
